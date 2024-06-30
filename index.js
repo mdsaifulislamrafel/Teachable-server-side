@@ -86,6 +86,8 @@ async function run() {
 
 
         app.get('/classes', async (req, res) => {
+            // const email = req.query.email;
+            // const query = {email: email};
             const result = await courseCollection.find().toArray();
             res.send(result);
         });
@@ -97,11 +99,121 @@ async function run() {
             res.send(result);
         });
 
+        app.get('/class/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const result = await courseCollection.find(query).toArray();
+            res.send(result);
+        });
+
+
+        app.get('/classes/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await courseCollection.findOne(query);
+            res.send(result);
+        });
+
+        app.delete('/classes/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await courseCollection.deleteOne(query);
+            res.send(result);
+        });
+
+
+        app.post('/classes', async (req, res) => {
+            const newClass = req.body;
+            const result = await courseCollection.insertOne(newClass);
+            res.send(result);
+        });
+
+        app.patch('/classes/approve/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await courseCollection.updateOne(query, { $set: { status: 'approve' } });
+            res.send(result);
+        });
+        app.patch('/classes/rejected/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await courseCollection.updateOne(query, { $set: { status: 'rejected' } });
+            res.send(result);
+        });
+
+        app.patch('/classes/:id', async (req, res) => {
+            const data = req.body;
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set: {
+                    ...data,
+                }
+            };
+            try {
+                const result = await courseCollection.updateOne(filter, updatedDoc, options);
+                res.send(result);
+            } catch (error) {
+                console.error("Error updating class:", error);
+                res.status(500).send("Failed to update class.");
+            }
+        });
+
+
         // teachers apis
         app.get('/teachers', async (req, res) => {
             const result = await TeacherApplicationCollection.find().toArray();
             res.send(result);
         });
+
+        app.get('/teachers/position/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+            if (email !== req.decoded.email) {
+                return res.status(403).send({ message: 'Unauthorized request' });
+            }
+
+            const query = { email: email };
+            const user = await TeacherApplicationCollection.findOne(query);
+            let position = false;
+            if (user) {
+                position = user?.position === 'teacher';
+            }
+            res.send({ position });
+        });
+
+
+        app.patch('/teachers/approved/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set: {
+                    status: 'approved',
+                    position: 'teacher'
+                }
+            };
+            const result = await TeacherApplicationCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+
+        });
+
+        app.patch('/teachers/reject/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set: {
+                    status: 'Reject',
+                }
+            };
+            const result = await TeacherApplicationCollection.updateOne(filter, updatedDoc, options);
+            res.send(result);
+
+        });
+
+
+
 
         app.post('/teachers', async (req, res) => {
             const teacher = req.body;
@@ -135,6 +247,13 @@ async function run() {
         // users list
         app.get('/users', async (req, res) => {
             const result = await userCollection.find().toArray();
+            res.send(result);
+        });
+
+        app.get('/users/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const result = await userCollection.findOne(query);
             res.send(result);
         });
 

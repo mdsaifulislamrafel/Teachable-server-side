@@ -48,6 +48,43 @@ async function run() {
             res.send({ token });
         });
 
+
+        // token middleware start
+
+        const verifyToken = (req, res, next) => {
+            console.log('Inside verify token', req.headers.authorization);
+            if (!req.headers.authorization) {
+                return res.status(401).send({ message: 'Unauthorized request' });
+            }
+            const token = req.headers.authorization.split(' ')[1];
+
+            jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+                if (err) {
+                    return res.status(401).send({ message: 'Unauthorized request' });
+                }
+                req.decoded = decoded;
+                next();
+            })
+        };
+
+
+        //  use verify admin after verify token
+
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            const isAdmin = user?.role == 'admin';
+            if (!isAdmin) {
+                return res.status(403).send({ message: 'Unauthorized request' });
+            }
+            next();
+
+        };
+
+        // token middleware end
+
+
         app.get('/classes', async (req, res) => {
             const result = await courseCollection.find().toArray();
             res.send(result);
@@ -61,6 +98,11 @@ async function run() {
         });
 
         // teachers apis
+        app.get('/teachers', async (req, res) => {
+            const result = await TeacherApplicationCollection.find().toArray();
+            res.send(result);
+        });
+
         app.post('/teachers', async (req, res) => {
             const teacher = req.body;
             const result = await TeacherApplicationCollection.insertOne(teacher);
@@ -91,6 +133,18 @@ async function run() {
         });
 
         // users list
+        app.get('/users', async (req, res) => {
+            const result = await userCollection.find().toArray();
+            res.send(result);
+        });
+
+        app.delete('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await userCollection.deleteOne(query);
+            res.send(result);
+        });
+
         app.post('/users', async (req, res) => {
             const user = req.body;
             // insert email if user does not exist
@@ -104,6 +158,37 @@ async function run() {
             const result = await userCollection.insertOne(user);
             res.send(result);
         });
+
+        // make sure the admin api
+
+        app.get('/users/admin/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+            if (email !== req.decoded.email) {
+                return res.status(403).send({ message: 'Unauthorized request' });
+            }
+
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            let admin = false;
+            if (user) {
+                admin = user?.role === 'admin';
+            }
+            res.send({ admin });
+        });
+
+        app.patch('/users/admin/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    role: 'admin'
+                }
+            };
+            const result = await userCollection.updateOne(filter, updatedDoc);
+            res.send(result);
+        });
+
+
 
 
         // payment process 

@@ -39,6 +39,9 @@ async function run() {
         const userCollection = client.db('courceDB').collection('users');
         const cartCollection = client.db('courceDB').collection('carts');
         const TeacherApplicationCollection = client.db('courceDB').collection('teachers');
+        const assignmentCollection = client.db('courceDB').collection('assignments');
+        const submitCollection = client.db('courceDB').collection('submit');
+        const reviewCollection = client.db('courceDB').collection('reviews');
 
         // jwt web token apis start
 
@@ -222,7 +225,52 @@ async function run() {
         });
 
 
+        // Assignment apis
+
+        app.get('/assignments', async (req, res) => {
+            const result = await assignmentCollection.find().toArray();
+            res.send(result);
+        });
+
+        app.post('/assignments', async (req, res) => {
+            const assignment = req.body;
+            const result = await assignmentCollection.insertOne(assignment);
+            res.send(result);
+        });
+
+
+        // assignment submit apis
+
+        app.get('/submit', async (req, res) => {
+            const result = await submitCollection.find().toArray();
+            res.send(result);
+        });
+
+        app.post('/submit', async (req, res) => {
+            const submit = req.body;
+            const result = await submitCollection.insertOne(submit);
+            res.send(result);
+        });
+
+        // review apis
+
+        app.get('/review', async (req, res) => {
+            const result = await reviewCollection.find().toArray();
+            res.send(result);
+        });
+
+        app.post('/review', async (req, res) => {
+            const review = req.body;
+            const result = await reviewCollection.insertOne(review);
+            res.send(result);
+        });
+
         // enroll carts list 
+
+        app.get('/carts', async (req, res) => {
+            const result = await cartCollection.find().toArray();
+            res.send(result);
+         });
 
         app.get('/carts', async (req, res) => {
             const email = req.query.email;
